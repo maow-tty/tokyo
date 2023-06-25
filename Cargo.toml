@@ -1,0 +1,10 @@
+[package]
+name = "tokyo"
+description = "A monolithic, capability-based kernel"
+authors = ["Maow"]
+repository = "https://github.com/maow-tty/tokyo"
+license = "MIT"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
