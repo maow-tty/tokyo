@@ -1,0 +1,14 @@
+[package]
+name = "kernel"
+description = "A monolithic kernel"
+authors = ["Maow"]
+repository = "https://github.com/maow-tty/tokyo"
+license = "MIT"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+bootloader_api = "0.11.3"
+font8x8 = { version = "0.3.1", default-features = false }
+bitvec = { version = "1.0.1", default-features = false }
+spin = "0.9.8"

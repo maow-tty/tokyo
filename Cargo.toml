@@ -1,10 +1,18 @@
 [package]
 name = "tokyo"
-description = "A monolithic, capability-based kernel"
+description = "A monolithic kernel"
 authors = ["Maow"]
 repository = "https://github.com/maow-tty/tokyo"
 license = "MIT"
 version = "0.1.0"
 edition = "2021"
 
+[workspace]
+members = ["kernel"]
+
 [dependencies]
+ovmf-prebuilt = "0.1.0-alpha.1"
+
+[build-dependencies]
+bootloader = "0.11.3"
+kernel = { path = "kernel", artifact = "bin", target = "x86_64-unknown-none" }
