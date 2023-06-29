@@ -1,38 +1,62 @@
 #![no_std]
 #![no_main]
+#![feature(abi_x86_interrupt)]
+#![feature(iter_array_chunks)]
 
-mod framebuffer;
-mod text;
+mod idt;
+mod gdt;
+mod acpi;
+pub mod graphics;
+pub mod alloc;
 
-use core::fmt::Write;
-use core::cell::OnceCell;
 use core::panic::PanicInfo;
 use bootloader_api::BootInfo;
-use spin::Mutex;
-use crate::framebuffer::{FrameBufferView, Rgb};
-use crate::text::{ErrorWriter, print_str};
-
-pub static VIEW: Mutex<OnceCell<FrameBufferView>> = Mutex::new(OnceCell::new());
+use x86_64::instructions;
+use x86_64::instructions::interrupts;
+use crate::graphics::Rgb;
+use crate::idt::PICS;
 
 bootloader_api::entry_point!(kernel_main);
 
 fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
-    let framebuffer = boot_info.framebuffer.as_mut().expect("framebuffer should exist");
-    {
-        let mut view = FrameBufferView::new(framebuffer.info(), framebuffer.buffer_mut());
+    // TODO: implement acpi after alloc implementation
+    // if let Some(rsdp) = boot_info.rsdp_addr.as_ref() {
+    //     acpi::init(*rsdp);
+    // }
+
+    // framebuffer
+    let mut framebuffer = boot_info.framebuffer.as_mut().expect("framebuffer should exist");
+    graphics::init(framebuffer.info(), framebuffer.buffer_mut());
+
+    gdt::init(); // global descriptor table
+    idt::init(); // interrupt descriptor table
+
+    unsafe { PICS.lock().initialize(); } // programmable interrupt controller
+    interrupts::enable(); // set interrupts
+
+    // test code, remove later
+    graphics::use_view(|view| {
         view.clear(Rgb::BLACK);
-        VIEW.lock().set(view).ok().unwrap();
-    }
-    panic!("a test panic to show off the panic screen.");
-    loop {}
+        view.draw_rect((0, 0), 25, 25, Rgb::RED);
+        view.draw_rect((25, 0), 25, 25, Rgb::ORANGE);
+        view.draw_rect((50, 0), 25, 25, Rgb::YELLOW);
+        view.draw_rect((75, 0), 25, 25, Rgb::GREEN);
+        view.draw_rect((100, 0), 25, 25, Rgb::BLUE);
+        view.draw_rect((125, 0), 25, 25, Rgb::PURPLE);
+    });
+
+    block_indefinitely();
 }
 
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
-    VIEW.lock().get_mut().unwrap().clear(Rgb::RED);
-    let mut error_writer = ErrorWriter::new();
-    if let Err(_) = write!(error_writer, "{}", info) {
-        print_str("failed to panic", 0, 0, Rgb::WHITE, Rgb::RED);
-    }
-    loop {}
+    graphics::use_view(|view| {
+        view.clear(Rgb::RED);
+    });
+
+    block_indefinitely();
+}
+
+fn block_indefinitely() -> ! {
+    loop { instructions::hlt(); }
 }

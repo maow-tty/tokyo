@@ -1,14 +1,24 @@
 [package]
 name = "kernel"
-description = "A monolithic kernel"
+description = "A monolithic kernel for x86_64"
 authors = ["Maow"]
 repository = "https://github.com/maow-tty/tokyo"
 license = "MIT"
 version = "0.1.0"
 edition = "2021"
 
+[[bin]]
+name = "kernel"
+test = false
+bench = false
+
 [dependencies]
 bootloader_api = "0.11.3"
+x86_64 = "0.14.10"
+pic8259 = "0.10.4"
+#acpi = "4.1.1"
+#aml = "0.16.4"
 font8x8 = { version = "0.3.1", default-features = false }
+line_drawing = { git = "https://github.com/andyblarblar/line_drawing.git" }
 bitvec = { version = "1.0.1", default-features = false }
 spin = "0.9.8"

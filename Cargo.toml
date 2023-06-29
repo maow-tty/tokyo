@@ -1,6 +1,6 @@
 [package]
 name = "tokyo"
-description = "A monolithic kernel"
+description = "A monolithic kernel for x86_64"
 authors = ["Maow"]
 repository = "https://github.com/maow-tty/tokyo"
 license = "MIT"
