@@ -1,9 +1,11 @@
 use core::fmt::Write;
+use pc_keyboard::{DecodedKey, HandleControl, Keyboard, KeyCode, layouts, ScancodeSet1};
 use pic8259::ChainedPics;
 use spin::{Lazy, Mutex};
+use x86_64::instructions::port::Port;
 use x86_64::structures::idt::{InterruptDescriptorTable, InterruptStackFrame};
 use crate::{gdt, graphics};
-use crate::graphics::Rgb;
+use crate::graphics::{Rgb, use_view};
 
 pub(crate) const PIC_OFFSET: u8 = 32;
 
@@ -61,10 +63,43 @@ extern "x86-interrupt" fn timer(_frame: InterruptStackFrame) {
     eoi!(Timer);
 }
 
+static KEYBOARD: Mutex<Keyboard<layouts::Us104Key, ScancodeSet1>> = Mutex::new(Keyboard::new(
+    ScancodeSet1::new(),
+    layouts::Us104Key,
+    HandleControl::Ignore
+));
+
 extern "x86-interrupt" fn keyboard(_frame: InterruptStackFrame) {
-    graphics::use_view(|view| {
-        view.clear(Rgb::BLUE);
-    });
+    let mut keyboard = KEYBOARD.lock();
+    let mut port = Port::new(0x60);
+
+    // TODO: un-ugly the code
+    let scancode: u8 = unsafe { port.read() };
+    if let Ok(Some(key_event)) = keyboard.add_byte(scancode) {
+        if let Some(key) = keyboard.process_keyevent(key_event) {
+            match key {
+                DecodedKey::Unicode(char) => {
+                    use_view(|view| {
+                        if char == '\x08' {
+                            view.backspace()
+                        } else {
+                            view.print_char(char, Rgb::WHITE, Rgb::BLACK);
+                        }
+                    })
+                }
+                DecodedKey::RawKey(code) => {
+                    match code {
+                        KeyCode::Return => {
+                            use_view(|view| { view.new_line() });
+                        }
+                        _ => {}
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
+
     eoi!(Keyboard);
 }
 

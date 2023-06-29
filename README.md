@@ -3,6 +3,9 @@
 A monolithic kernel for the x86_64 architecture, written in pure Rust,
 and mainly developed to help better understand the inner workings of both CPUs and operating systems.
 
+**Notice:** The kernel does not currently support UEFI due to limitations in the code as well as unpatched bugs.
+Feel free to contribute bug fixes, features will *not* be accepted though.
+
 ## Features
 
 - [x] Bootloader
@@ -11,7 +14,7 @@ and mainly developed to help better understand the inner workings of both CPUs a
 - [x] Interrupts
 - [x] Stack Switching
 - [x] Hardware Interrupts
-- [ ] Keyboard Input
+- [x] Keyboard Input
 - [ ] Paging
 - [ ] Allocation
 - [ ] Double Buffering
@@ -40,7 +43,9 @@ As of right now, the project uses these crates:
 - [`line_drawing`](https://github.com/expenses/line_drawing) (with no_std fix by `andyblarblar`)
 - [`bitvec`](https://github.com/ferrilab/bitvec)
 - [`spin`](https://github.com/mvdnes/spin-rs)
+- [`float-cmp`](https://github.com/mikedilger/float-cmp)
 - [`unchecked_index`](https://github.com/bluss/unchecked-index)
+- [`pc_keyboard`](https://github.com/rust-embedded-community/pc-keyboard)
 
 ## License
 

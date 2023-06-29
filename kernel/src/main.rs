@@ -1,7 +1,6 @@
 #![no_std]
 #![no_main]
 #![feature(abi_x86_interrupt)]
-#![feature(iter_array_chunks)]
 
 mod idt;
 mod gdt;
@@ -10,11 +9,12 @@ pub mod graphics;
 pub mod alloc;
 pub mod ext;
 
+use core::fmt::Write;
 use core::panic::PanicInfo;
 use bootloader_api::BootInfo;
 use x86_64::instructions;
 use x86_64::instructions::interrupts;
-use crate::graphics::Rgb;
+use crate::graphics::{ErrorWriter, Rgb};
 use crate::idt::PICS;
 
 bootloader_api::entry_point!(kernel_main);
@@ -37,7 +37,7 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
 
     graphics::use_view(|view| {
         view.clear(Rgb::BLACK);
-        view.draw_str("Hello, World!", Rgb::WHITE, Rgb::BLACK);
+        view.print_str("tokyo 0.1.0\n---\nthe bees!\n", Rgb::PURPLE, Rgb::BLACK);
     });
 
     block_indefinitely();
@@ -46,9 +46,9 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
     graphics::use_view(|view| {
-        view.clear(Rgb::RED);
+        let mut error_writer = ErrorWriter::new(view);
+        write!(&mut error_writer, "{}", info).unwrap();
     });
-
     block_indefinitely();
 }
 

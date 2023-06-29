@@ -1,5 +1,7 @@
+use core::fmt;
 use bitvec::macros::internal::funty::Fundamental;
 use bitvec::prelude::*;
+use float_cmp::approx_eq;
 use line_drawing::{Bresenham, Point};
 use spin::Mutex;
 use unchecked_index::UncheckedIndex;
@@ -7,6 +9,9 @@ use x86_64::instructions::interrupts;
 use crate::ext::{BlFrameBufferInfo, FrameBufferInfo};
 
 // TODO: Add support for framebuffers other than 24-bit BGR
+
+pub const CHAR_WIDTH  : usize = 8;
+pub const CHAR_HEIGHT : usize = 8;
 
 static VIEW: Mutex<Option<FrameBufferView>> = Mutex::new(None);
 
@@ -26,8 +31,8 @@ impl FrameBufferView {
             buffer: unsafe { unchecked_index::unchecked_index(buffer) },
             column: 0,
             row: 0,
-            max_columns: info.height / 8,
-            max_rows: info.width / 8
+            max_columns: info.height / CHAR_HEIGHT,
+            max_rows: info.width / CHAR_WIDTH
         }
     }
 
@@ -96,7 +101,7 @@ impl FrameBufferView {
     pub fn draw_char(&mut self, pos: (usize, usize), char: char, foreground: Rgb, background: Rgb) {
         let chars = font8x8::legacy::BASIC_LEGACY[char as usize];
 
-        let pixels = &mut [Rgb::new(0, 0, 0); 64];
+        let pixels = &mut [Rgb::BLACK; CHAR_WIDTH * CHAR_HEIGHT];
         chars.iter()
             .flat_map(|char| char.view_bits::<Lsb0>().iter())
             .enumerate()
@@ -104,22 +109,78 @@ impl FrameBufferView {
                 pixels[idx] = if bit.as_bool() { background } else { foreground };
             });
 
-        self.draw_textured((pos.0 * 8, pos.1 * 8), 8, pixels);
+        self.draw_textured((pos.0 * CHAR_WIDTH, pos.1 * CHAR_HEIGHT), CHAR_WIDTH, pixels);
     }
 
-    pub fn draw_str(&mut self, str: &str, foreground: Rgb, background: Rgb) {
-        for char in str.chars() {
-            self.draw_char((self.row, self.column), char, foreground, background);
-            self.row += 1;
-            if self.row == self.max_rows {
-                self.row = 0;
-                if self.column == self.max_columns {
-                    self.column = 0;
-                    self.clear(Rgb::BLACK);
-                }
-                self.column += 1;
-            }
+    pub fn print_char(&mut self, char: char, foreground: Rgb, background: Rgb) {
+        self.end_of_row();
+        self.end_of_column();
+
+        if char == '\n' {
+            self.column += 1;
+            self.row = 0;
+            return;
         }
+
+        self.draw_char((self.row, self.column), char, foreground, background);
+        self.row += 1;
+    }
+
+    fn end_of_row(&mut self) {
+        if self.row == self.max_rows {
+            self.row = 0;
+            self.column += 1;
+        }
+    }
+
+    fn end_of_column(&mut self) -> bool {
+        if self.column == self.max_columns {
+            // TODO: push line upwards, this will be done when I can implement a text buffer
+            self.clear(Rgb::BLACK);
+            self.column = 0;
+            self.row = 0;
+            return true;
+        }
+        false
+    }
+
+    pub fn print_str(&mut self, str: &str, foreground: Rgb, background: Rgb) {
+        for char in str.chars() {
+            self.print_char(char, foreground, background);
+        }
+    }
+
+    pub fn new_line(&mut self) {
+        if !self.end_of_column() {
+            self.column += 1;
+            self.row = 0;
+        }
+    }
+
+    pub fn backspace(&mut self) {
+        if self.row == 0 && self.column != 0 {
+            self.column -= 1;
+            self.row = self.max_rows - 1;
+        } else if self.row != 0 {
+            self.row -= 1;
+            self.draw_char((self.row, self.column), ' ', Rgb::BLACK, Rgb::BLACK);
+        }
+    }
+}
+
+pub struct ErrorWriter<'a>(&'a mut FrameBufferView);
+
+impl<'a> ErrorWriter<'a> {
+    pub fn new(view: &'a mut FrameBufferView) -> Self {
+        Self(view)
+    }
+}
+
+impl<'a> fmt::Write for ErrorWriter<'a> {
+    fn write_str(&mut self, str: &str) -> fmt::Result {
+        self.0.clear(Rgb::RED);
+        self.0.print_str(str, Rgb::WHITE, Rgb::RED);
+        Ok(())
     }
 }
 
