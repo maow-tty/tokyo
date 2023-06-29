@@ -1,35 +1,46 @@
-use core::slice;
 use bitvec::macros::internal::funty::Fundamental;
 use bitvec::prelude::*;
-use bootloader_api::info::FrameBufferInfo;
 use line_drawing::{Bresenham, Point};
 use spin::Mutex;
+use unchecked_index::UncheckedIndex;
 use x86_64::instructions::interrupts;
+use crate::ext::{BlFrameBufferInfo, FrameBufferInfo};
 
 // TODO: Add support for framebuffers other than 24-bit BGR
 
 static VIEW: Mutex<Option<FrameBufferView>> = Mutex::new(None);
 
-pub struct FrameBufferView<'a> {
+pub struct FrameBufferView {
     info: FrameBufferInfo,
-    buffer: &'a mut [u8]
+    buffer: UncheckedIndex<&'static mut [u8]>,
+    column: usize,
+    row: usize,
+    max_columns: usize,
+    max_rows: usize
 }
 
-impl<'a> FrameBufferView<'a> {
-    pub fn new(info: FrameBufferInfo, buffer: &'a mut [u8]) -> Self {
-        Self { info, buffer }
+impl FrameBufferView {
+    pub fn new(info: BlFrameBufferInfo, buffer: &'static mut [u8]) -> Self {
+        Self {
+            info: FrameBufferInfo::from(info),
+            buffer: unsafe { unchecked_index::unchecked_index(buffer) },
+            column: 0,
+            row: 0,
+            max_columns: info.height / 8,
+            max_rows: info.width / 8
+        }
     }
 
     pub fn clear(&mut self, color: Rgb) {
-        // chunk by stride (width + padding), split at width, discard padding
+        let width = self.info.width;
         self.buffer
-            .chunks_exact_mut(self.info.stride * 3)
-            .map(|dst| dst.split_at_mut(self.info.width * 3))
-            .for_each(|(dst, _)| {
-                for pixel in dst.chunks_exact_mut(3) {
-                    pixel[0] = color.blue;
-                    pixel[1] = color.green;
-                    pixel[2] = color.red;
+            .chunks_exact_mut(self.info.stride)
+            .map(|line| &mut line[..width])
+            .for_each(|dst| {
+                for i in (0..width).step_by(3) {
+                    dst[i]     = color.blue;
+                    dst[i + 1] = color.green;
+                    dst[i + 2] = color.red;
                 }
             });
     }
@@ -38,35 +49,81 @@ impl<'a> FrameBufferView<'a> {
     where
         P: Into<Point<isize>>
     {
-        let row_length = self.info.stride; // row length in pixels
+        let width = self.info.width;
         for (x, y) in Bresenham::new(start.into(), end.into()) {
-            let idx = 3 * ((y * row_length as isize) + x) as usize;
-            self.buffer[idx] = color.blue;
-            self.buffer[idx + 1] = color.green;
-            self.buffer[idx + 2] = color.red;
+            assert!((x as usize) < width);
+
+            let i = (y as usize * width) + (x as usize * 3);
+            self.buffer[i]     = color.blue;
+            self.buffer[i + 1] = color.green;
+            self.buffer[i + 2] = color.red;
         }
     }
 
     pub fn draw_rect(&mut self, pos: (usize, usize), width: usize, height: usize, color: Rgb) {
-        let end = (pos.0 + width, pos.1 + height);
-        self.draw_rect_points(pos, end, width, color);
+        let stride = self.info.stride;
+
+        let mut start = pos.1 * stride;
+        for _ in 0..height {
+            let dst = &mut self.buffer[start + pos.0 * 3..];
+            for i in (0..width * 3).step_by(3) {
+                dst[i]     = color.blue;
+                dst[i + 1] = color.green;
+                dst[i + 2] = color.red;
+            }
+            start += stride;
+        }
     }
 
-    fn draw_rect_points(&mut self, start: (usize, usize), end: (usize, usize), width: usize, color: Rgb) {
-        (start.1..end.1)
-            .map(|y| (self.info.width * 3) * y + (start.0 * 3))
-            .map(|offset| unsafe { self.buffer.as_mut_ptr().offset(offset as isize) })
-            .map(|ptr| unsafe { slice::from_raw_parts_mut(ptr, width * 3) })
-            .flat_map(|dst| dst.chunks_exact_mut(3))
-            .for_each(|dst| {
-                dst[0] = color.blue;
-                dst[1] = color.green;
-                dst[2] = color.red;
+    pub fn draw_textured(&mut self, pos: (usize, usize), width: usize, pixels: &[Rgb]) {
+        let stride = self.info.stride;
+        let start = pos.0 * 3;
+
+        (self.buffer[pos.1 * stride..])
+            .chunks_exact_mut(stride)
+            .zip(pixels.chunks_exact(width))
+            .for_each(|(dst, src)| {
+                let mut src = src.into_iter();
+                for dst in dst[start..start + width * 3].chunks_exact_mut(3) {
+                    let color = src.next().expect("pixel should exist");
+                    dst[0] = color.blue;
+                    dst[1] = color.green;
+                    dst[2] = color.red;
+                }
             });
+    }
+
+    pub fn draw_char(&mut self, pos: (usize, usize), char: char, foreground: Rgb, background: Rgb) {
+        let chars = font8x8::legacy::BASIC_LEGACY[char as usize];
+
+        let pixels = &mut [Rgb::new(0, 0, 0); 64];
+        chars.iter()
+            .flat_map(|char| char.view_bits::<Lsb0>().iter())
+            .enumerate()
+            .for_each(|(idx, bit)| {
+                pixels[idx] = if bit.as_bool() { background } else { foreground };
+            });
+
+        self.draw_textured((pos.0 * 8, pos.1 * 8), 8, pixels);
+    }
+
+    pub fn draw_str(&mut self, str: &str, foreground: Rgb, background: Rgb) {
+        for char in str.chars() {
+            self.draw_char((self.row, self.column), char, foreground, background);
+            self.row += 1;
+            if self.row == self.max_rows {
+                self.row = 0;
+                if self.column == self.max_columns {
+                    self.column = 0;
+                    self.clear(Rgb::BLACK);
+                }
+                self.column += 1;
+            }
+        }
     }
 }
 
-pub(crate) fn init(info: FrameBufferInfo, buffer: &'static mut[u8]) {
+pub(crate) fn init(info: BlFrameBufferInfo, buffer: &'static mut[u8]) {
     let view = FrameBufferView::new(info, buffer);
     *VIEW.lock() = Some(view);
 }
@@ -102,27 +159,5 @@ impl Rgb {
 
     pub const fn new(red: u8, green: u8, blue: u8) -> Self {
         Self { red, green, blue }
-    }
-}
-
-pub fn print_char(char: char, x: usize, y: usize, fore_color: Rgb, back_color: Rgb) {
-    let idx = char as usize;
-    if idx >= 128 { return }
-    let chars = font8x8::legacy::BASIC_LEGACY[idx];
-
-    let pixels = &mut [Rgb::new(0, 0, 0); 64];
-    chars.iter()
-        .flat_map(|char| char.view_bits::<Lsb0>().iter())
-        .enumerate()
-        .for_each(|(idx, bit)| {
-            pixels[idx] = if bit.as_bool() { back_color } else { fore_color };
-        });
-
-    //draw_quad(pixels, x * 8, y * 8, 8);
-}
-
-pub fn print_str(str: &str, x_offset: usize, y: usize, fore_color: Rgb, back_color: Rgb) {
-    for (idx, char) in str.chars().enumerate() {
-        print_char(char, idx + x_offset, y, fore_color, back_color);
     }
 }

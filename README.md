@@ -7,10 +7,10 @@ and mainly developed to help better understand the inner workings of both CPUs a
 
 - [x] Bootloader
 - [x] Framebuffer
-- [ ] Text Rendering
+- [x] Text Rendering
 - [x] Interrupts
 - [x] Stack Switching
-- [ ] Hardware Interrupts
+- [x] Hardware Interrupts
 - [ ] Keyboard Input
 - [ ] Paging
 - [ ] Allocation
@@ -40,6 +40,7 @@ As of right now, the project uses these crates:
 - [`line_drawing`](https://github.com/expenses/line_drawing) (with no_std fix by `andyblarblar`)
 - [`bitvec`](https://github.com/ferrilab/bitvec)
 - [`spin`](https://github.com/mvdnes/spin-rs)
+- [`unchecked_index`](https://github.com/bluss/unchecked-index)
 
 ## License
 

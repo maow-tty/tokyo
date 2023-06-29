@@ -8,6 +8,7 @@ mod gdt;
 mod acpi;
 pub mod graphics;
 pub mod alloc;
+pub mod ext;
 
 use core::panic::PanicInfo;
 use bootloader_api::BootInfo;
@@ -34,15 +35,9 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     unsafe { PICS.lock().initialize(); } // programmable interrupt controller
     interrupts::enable(); // set interrupts
 
-    // test code, remove later
     graphics::use_view(|view| {
         view.clear(Rgb::BLACK);
-        view.draw_rect((0, 0), 25, 25, Rgb::RED);
-        view.draw_rect((25, 0), 25, 25, Rgb::ORANGE);
-        view.draw_rect((50, 0), 25, 25, Rgb::YELLOW);
-        view.draw_rect((75, 0), 25, 25, Rgb::GREEN);
-        view.draw_rect((100, 0), 25, 25, Rgb::BLUE);
-        view.draw_rect((125, 0), 25, 25, Rgb::PURPLE);
+        view.draw_str("Hello, World!", Rgb::WHITE, Rgb::BLACK);
     });
 
     block_indefinitely();
