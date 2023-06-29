@@ -5,25 +5,25 @@ and mainly developed to help better understand the inner workings of both CPUs a
 
 ## Features
 
-[x] Bootloader
-[x] Framebuffer
-[ ] Text Rendering
-[x] Interrupts
-[x] Stack Switching
-[ ] Hardware Interrupts
-[ ] Keyboard Input
-[ ] Paging
-[ ] Allocation
-[ ] Double Buffering
-[ ] Shell
-[ ] Multitasking
-[ ] User Management
-[ ] Filesystem
-[ ] ELF Executables
-[ ] ACPI
-[ ] USB Devices
-[ ] Networking
-[ ] System Calls
+- [x] Bootloader
+- [x] Framebuffer
+- [ ] Text Rendering
+- [x] Interrupts
+- [x] Stack Switching
+- [ ] Hardware Interrupts
+- [ ] Keyboard Input
+- [ ] Paging
+- [ ] Allocation
+- [ ] Double Buffering
+- [ ] Shell
+- [ ] Multitasking
+- [ ] User Management
+- [ ] Filesystem
+- [ ] ELF Executables
+- [ ] ACPI
+- [ ] USB Devices
+- [ ] Networking
+- [ ] System Calls
 
 ## Acknowledgements
 
