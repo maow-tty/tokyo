@@ -3,9 +3,9 @@ use pc_keyboard::{DecodedKey, HandleControl, Keyboard, KeyCode, layouts, Scancod
 use pic8259::ChainedPics;
 use spin::{Lazy, Mutex};
 use x86_64::instructions::port::Port;
-use x86_64::structures::idt::{InterruptDescriptorTable, InterruptStackFrame};
-use crate::{gdt, graphics};
-use crate::graphics::{Rgb, use_view};
+use x86_64::structures::idt::{InterruptDescriptorTable, InterruptStackFrame, PageFaultErrorCode};
+use crate::{block_indefinitely, gdt, graphics};
+use crate::graphics::{ErrorWriter, Rgb};
 
 pub(crate) const PIC_OFFSET: u8 = 32;
 
@@ -28,6 +28,8 @@ pub(crate) static mut IDT: Lazy<InterruptDescriptorTable> = Lazy::new(||  {
             .set_stack_index(gdt::DOUBLE_FAULT_IST_INDEX);
     }
 
+    idt.page_fault.set_handler_fn(page_fault);
+
     idt
 });
 
@@ -48,7 +50,22 @@ extern "x86-interrupt" fn double_fault(_frame: InterruptStackFrame, _code: u64) 
     graphics::use_view(|view| {
         view.clear(Rgb::RED);
     });
-    loop {}
+
+    block_indefinitely();
+}
+
+extern "x86-interrupt" fn page_fault(frame: InterruptStackFrame, error_code: PageFaultErrorCode) {
+    use x86_64::registers::control::Cr2;
+
+    graphics::use_view(|view| {
+        let mut error_writer = ErrorWriter::new(view);
+        write!(error_writer,
+               "Page Fault\nAddress: {:?}\nError Code: {:?}\n{:#?}",
+               Cr2::read(), error_code, frame
+        ).unwrap();
+    });
+    
+    block_indefinitely(); // TODO: handle page fault
 }
 
 macro_rules! eoi {
@@ -79,7 +96,7 @@ extern "x86-interrupt" fn keyboard(_frame: InterruptStackFrame) {
         if let Some(key) = keyboard.process_keyevent(key_event) {
             match key {
                 DecodedKey::Unicode(char) => {
-                    use_view(|view| {
+                    graphics::use_view(|view| {
                         if char == '\x08' {
                             view.backspace()
                         } else {
@@ -87,13 +104,8 @@ extern "x86-interrupt" fn keyboard(_frame: InterruptStackFrame) {
                         }
                     })
                 }
-                DecodedKey::RawKey(code) => {
-                    match code {
-                        KeyCode::Return => {
-                            use_view(|view| { view.new_line() });
-                        }
-                        _ => {}
-                    }
+                DecodedKey::RawKey(code) if code == KeyCode::Return => {
+                    graphics::use_view(|view| { view.new_line() });
                 }
                 _ => {}
             }

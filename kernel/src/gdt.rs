@@ -15,6 +15,7 @@ pub(crate) static GDT: Lazy<(GlobalDescriptorTable, Selectors)> = Lazy::new(|| {
     (gdt, Selectors { code_selector, data_selector, tss_selector })
 });
 
+#[allow(unused)]
 pub(crate) struct Selectors {
     code_selector: SegmentSelector,
     data_selector: SegmentSelector,
@@ -28,8 +29,7 @@ pub(crate) static TSS: Lazy<TaskStateSegment> = Lazy::new(|| {
         static mut STACK: [u8; STACK_SIZE] = [0; STACK_SIZE];
 
         let stack_start = VirtAddr::from_ptr(unsafe { &STACK });
-        let stack_end = stack_start + STACK_SIZE;
-        stack_end
+        stack_start + STACK_SIZE
     };
     tss
 });

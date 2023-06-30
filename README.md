@@ -15,8 +15,8 @@ Feel free to contribute bug fixes, features will *not* be accepted though.
 - [x] Stack Switching
 - [x] Hardware Interrupts
 - [x] Keyboard Input
-- [ ] Paging
-- [ ] Allocation
+- [x] Paging
+- [x] Allocation
 - [ ] Double Buffering
 - [ ] Shell
 - [ ] Multitasking
@@ -43,7 +43,6 @@ As of right now, the project uses these crates:
 - [`line_drawing`](https://github.com/expenses/line_drawing) (with no_std fix by `andyblarblar`)
 - [`bitvec`](https://github.com/ferrilab/bitvec)
 - [`spin`](https://github.com/mvdnes/spin-rs)
-- [`float-cmp`](https://github.com/mikedilger/float-cmp)
 - [`unchecked_index`](https://github.com/bluss/unchecked-index)
 - [`pc_keyboard`](https://github.com/rust-embedded-community/pc-keyboard)
 

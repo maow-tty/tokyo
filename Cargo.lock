@@ -218,6 +218,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "either"
+version = "1.8.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7fcaabb2fef8c910e7f4c7ce9f67a1283a1715879a7c230ca9d6d1ae31f16d91"
+
+[[package]]
 name = "errno"
 version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -262,15 +268,6 @@ dependencies = [
  "bitflags",
  "byteorder",
  "log",
-]
-
-[[package]]
-name = "float-cmp"
-version = "0.9.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "98de4bbd547a563b716d8dfa9aad1cb19bfab00f4fa09a6a4ed21dbcf44ce9c4"
-dependencies = [
- "num-traits",
 ]
 
 [[package]]
@@ -412,6 +409,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "good_memory_allocator"
+version = "0.1.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b1651659e016ea4259760966432aebcc96c81e26743fb018c59585ddd677127e"
+dependencies = [
+ "either",
+ "spin",
+]
+
+[[package]]
 name = "gpt"
 version = "3.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -461,8 +468,8 @@ version = "0.1.0"
 dependencies = [
  "bitvec",
  "bootloader_api",
- "float-cmp",
  "font8x8",
+ "good_memory_allocator",
  "line_drawing",
  "pc-keyboard",
  "pic8259",

@@ -1,7 +1,6 @@
 use core::fmt;
 use bitvec::macros::internal::funty::Fundamental;
 use bitvec::prelude::*;
-use float_cmp::approx_eq;
 use line_drawing::{Bresenham, Point};
 use spin::Mutex;
 use unchecked_index::UncheckedIndex;
@@ -88,7 +87,7 @@ impl FrameBufferView {
             .chunks_exact_mut(stride)
             .zip(pixels.chunks_exact(width))
             .for_each(|(dst, src)| {
-                let mut src = src.into_iter();
+                let mut src = src.iter();
                 for dst in dst[start..start + width * 3].chunks_exact_mut(3) {
                     let color = src.next().expect("pixel should exist");
                     dst[0] = color.blue;
