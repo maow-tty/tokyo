@@ -1,5 +1,7 @@
 # :cityscape: tokyo
 
+**東京**
+
 A monolithic kernel for the x86_64 architecture, written in pure Rust,
 and mainly developed to help better understand the inner workings of both CPUs and operating systems.
 
@@ -10,16 +12,18 @@ Feel free to contribute bug fixes, features will *not* be accepted though.
 
 - [x] Bootloader
 - [x] Framebuffer
-- [x] Text Rendering
+- [ ] Text Rendering
+- [x] Serial Logging
 - [x] Interrupts
 - [x] Stack Switching
 - [x] Hardware Interrupts
-- [x] Keyboard Input
+- [ ] Keyboard Input
 - [x] Paging
-- [x] Allocation
-- [ ] Double Buffering
+- [x] Bitmap Frame Allocator
+- [x] Double Buffering
 - [ ] Shell
 - [ ] Multitasking
+- [ ] Threading
 - [ ] User Management
 - [ ] Filesystem
 - [ ] ELF Executables
@@ -32,19 +36,6 @@ Feel free to contribute bug fixes, features will *not* be accepted though.
 
 This wouldn't be possible with the help of Philipp Oppermann's [Writing an OS in Rust](https://os.phil-opp.com/) series, or
 the massive amount of OS development resources provided by the [OSDev wiki.](https://wiki.osdev.org/)
-
-As of right now, the project uses these crates:
-
-- [`bootloader`](https://github.com/rust-osdev/bootloader)
-- [`ovmf_prebuilt`](https://github.com/rust-osdev/ovmf-prebuilt)
-- [`x86_64`](https://github.com/rust-osdev/x86_64)
-- [`pic8259`](https://github.com/rust-osdev/pic8259)
-- [`font8x8`](https://gitlab.com/saibatizoku/font8x8-rs)
-- [`line_drawing`](https://github.com/expenses/line_drawing) (with no_std fix by `andyblarblar`)
-- [`bitvec`](https://github.com/ferrilab/bitvec)
-- [`spin`](https://github.com/mvdnes/spin-rs)
-- [`unchecked_index`](https://github.com/bluss/unchecked-index)
-- [`pc_keyboard`](https://github.com/rust-embedded-community/pc-keyboard)
 
 ## License
 
