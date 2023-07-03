@@ -5,7 +5,6 @@ use x86_64::structures::paging::{FrameAllocator, Mapper, OffsetPageTable, Page, 
 use x86_64::structures::paging::mapper::MapToError;
 use x86_64::structures::paging::page::PageRangeInclusive;
 use x86_64::VirtAddr;
-use crate::serial_println;
 
 pub unsafe fn mapper(physical_offset: VirtAddr) -> OffsetPageTable<'static> {
     let (frame, _) = Cr3::read();
@@ -15,7 +14,6 @@ pub unsafe fn mapper(physical_offset: VirtAddr) -> OffsetPageTable<'static> {
     let page_table_ptr: *mut PageTable = virt.as_mut_ptr();
 
     let page_table = unsafe { &mut *page_table_ptr };
-    serial_println!("[tokyo] retrieved level 4 page table");
     unsafe { OffsetPageTable::new(page_table, physical_offset) }
 }
 

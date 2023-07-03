@@ -19,7 +19,6 @@ use x86_64::{instructions, VirtAddr};
 use x86_64::instructions::interrupts;
 use crate::idt::PICS;
 use crate::mem::heap::KernelFrameAllocator;
-use crate::render::view::FrameBufferView;
 
 const CONFIG: BootloaderConfig = {
     let mut config = BootloaderConfig::new_default();
@@ -40,31 +39,21 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     serial_println!("[tokyo] system booted");
 
     // memory allocation
-    serial_println!("[tokyo] init memory allocator");
     let physical_offset = boot_info.physical_memory_offset.into_option().unwrap();
     let mut offset_table = unsafe { mem::mapper(VirtAddr::new(physical_offset)) };
     let mut frame_allocator = unsafe { KernelFrameAllocator::new(&boot_info.memory_regions).unwrap() };
     mem::heap::init(&mut offset_table, &mut frame_allocator).expect("heap initialization should not fail");
 
     // framebuffer
-    serial_println!("[tokyo] init framebuffer");
-    let frame_buffer = boot_info.framebuffer.as_mut().expect("framebuffer should exist");
-    render::init_view(frame_buffer);
+    let frame_buffer = boot_info.framebuffer.as_mut().unwrap();
+    render::init_global_view(frame_buffer);
 
-    serial_println!("[tokyo] init interrupts");
     gdt::init(); // global descriptor table
     idt::init(); // interrupt descriptor table
 
-    serial_println!("[tokyo] init PICS");
     unsafe { PICS.lock().initialize(); } // programmable interrupt controller
 
-    serial_println!("[tokyo] enable interrupts");
     interrupts::enable(); // set interrupts
-
-    render::use_view(|view| {
-        view.clear((0, 0, 255));
-        view.swap();
-    });
 
     block_indefinitely();
 }
@@ -72,6 +61,7 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
     serial_println!("[tokyo] {:?}", info);
+
     block_indefinitely();
 }
 

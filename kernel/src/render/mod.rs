@@ -5,18 +5,17 @@ use core::cell::OnceCell;
 use bootloader_api::info::FrameBuffer;
 use spin::Mutex;
 use x86_64::instructions::interrupts;
-use crate::render::view::{BufImmediateView, BufView};
+use crate::render::view::ImmediateView;
 
 /// A global frame buffer view that is initialized by the kernel entrypoint.
 ///
 /// This is used by various places around the kernel and provides concurrency safety,
 /// which is necessary when rendering from hardware interrupts.
-pub static GLOBAL_VIEW: Mutex<OnceCell<BufImmediateView>> = Mutex::new(OnceCell::new());
+pub static GLOBAL_VIEW: Mutex<OnceCell<ImmediateView>> = Mutex::new(OnceCell::new());
 
-pub fn init_view(view: &'static mut FrameBuffer) {
-    let view = BufView::from_immediate(view);
+pub fn init_global_view(frame_buffer: &'static mut FrameBuffer) {
     GLOBAL_VIEW.lock()
-        .set(view)
+        .set(ImmediateView::new(frame_buffer))
         .ok().expect("frame buffer view should not be initialized twice");
 }
 
@@ -24,9 +23,9 @@ pub fn init_view(view: &'static mut FrameBuffer) {
 ///
 /// This creates a temporary block where hardware interrupts are disabled, and
 /// the view is locked by the caller.
-pub fn use_view<F>(mut func: F)
+pub fn use_global_view<F>(mut func: F)
 where
-    F: FnMut(&mut BufImmediateView)
+    F: FnMut(&mut ImmediateView)
 {
     interrupts::without_interrupts(|| {
         let mut lock = GLOBAL_VIEW.lock();
@@ -35,7 +34,6 @@ where
         }
     });
 }
-
 
 /// An RGB color type.
 #[derive(Debug, Default, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash)]

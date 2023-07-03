@@ -82,10 +82,11 @@ impl ImmediateView {
 
         // figure out the buffer-specific pixel converter function
         let pixel_converter = match format {
-            PixelFormat::Rgb                => unimplemented!(),
+            PixelFormat::Rgb if depth == 3  => pixel::rgb_24,
+            PixelFormat::Rgb if depth == 4  => pixel::rgb_32,
             PixelFormat::Bgr if depth == 3  => pixel::bgr_24,
             PixelFormat::Bgr if depth == 4  => pixel::bgr_32,
-            PixelFormat::U8                 => unimplemented!(),
+            PixelFormat::U8                 => pixel::u8,
             _ => panic!("pixel format not supported: {:?}", format)
         };
 
